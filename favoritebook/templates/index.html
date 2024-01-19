@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css" />
+    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+
+    <title>sw사관학교 | 마이페이보릿북</title>
+
+    <!-- style -->
+    <style type="text/css">
+        .center {
+            text-align: center;
+        }
+
+        .book-list {
+            width: 500px;
+            margin: 20px auto 0 auto;
+        }
+
+        .star-name {
+            display: inline-block;
+        }
+
+        .star-name:hover {
+            text-decoration: underline;
+        }
+
+        .card {
+            margin-bottom: 15px;
+        }
+
+        #input-auth,
+        #input-title,
+        #btn-save {
+            display: none;
+        }
+    </style>
+    <script>
+        $(document).ready(function () {
+            showBooks();
+        });
+
+        function showBooks() {
+            $.ajax({
+                type: "GET",
+                url: "/api/book/list",
+                data: {},
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        $("#book-box").html("");
+                        let all_books = response["all_books"];
+                        for (let i = 0; i < all_books.length; i++) {
+                            let id = all_books[i]["id"];
+                            let title = all_books[i]["title"];
+                            let img_url = all_books[i]["img_url"];
+                            let auth = all_books[i]["auth"];
+                            let href = all_books[i]["href"];
+                            let like = all_books[i]["like"];
+                            makeBook(id, title, img_url, auth, href, like);
+                        }
+                    }
+                }
+            })
+        }
+
+        function makeBook(id, title, img_url, auth, href, like) {
+            let template = `<div id="book-${id}" class="card">
+                                <div class="card-content">
+                                    <div class="media">
+                                        <div class="media-left">
+                                            <figure class="image is-48x48">
+                                                <img src="${img_url}" alt="${title}" />
+                                            </figure>
+                                        </div>
+                                        <div class="media-content">
+                                            <a href="${href}" target="_blank" id="text-auth" class="star-name title is-4">${auth} (좋아요: ${like})</a>
+                                            <input type="text" id="input-auth" class="star-name title is-4" value="${auth}">
+                                            <p id="text-title" class="subtitle is-6">${title}</p>
+                                            <input type="text" id="input-title" class="subtitle is-6" value="${title}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <footer class="card-footer">
+                                    <a href="#none" onclick="likeBooks('${id}')" class="card-footer-item has-text-info">
+                                        위로!
+                                        <span class="icon">
+                                            <i class="fas fa-thumbs-up"></i>
+                                        </span>
+                                    </a>
+                                    <a href="#none" onclick="showInputs('${id}')" id="btn-mod" class="card-footer-item has-text-info">
+                                        수정
+                                        <span class="icon">
+                                            <i class="fas fa-pen"></i>
+                                        </span>
+                                    </a>
+                                    <button type="submit" onclick="updateBooks('${id}')" id="btn-save" class="btn card-footer-item has-text-info">
+                                        저장
+                                        <span class="icon">
+                                            <i class="fas fa-file"></i>
+                                        </span>
+                                    </button>
+                                    <a href="#none" onclick="deleteBooks('${id}')" class="card-footer-item has-text-danger">
+                                        삭제
+                                        <span class="icon">
+                                            <i class="fas fa-ban"></i>
+                                        </span>
+                                    </a>
+                                </footer>
+                            </div>`;
+            $("#book-box").append(template);
+        }
+
+        function likeBooks(id) {
+            $.ajax({
+                type: "POST",
+                url: "/api/book/like",
+                data: { "id": id },
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        // alert(response["like"]);
+                        showBooks();
+                    }
+                }
+            })
+        }
+
+        function showInputs(id) {
+            $("#book-" + id).find("#btn-mod").hide();
+            $("#book-" + id).find("#text-auth").hide();
+            $("#book-" + id).find("#text-title").hide();
+            $("#book-" + id).find("#btn-save").css("display", "flex");
+            $("#book-" + id).find("#input-auth").show();
+            $("#book-" + id).find("#input-title").show();
+        }
+
+        function updateBooks(id) {
+            let auth = $("#book-" + id).find("#input-auth").val();
+            let title = $("#book-" + id).find("#input-title").val();
+            $.ajax({
+                type: "POST",
+                url: "/api/book/update",
+                data: { "id": id, "auth": auth, "title": title },
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        alert("저장되었습니다!")
+                        showBooks();
+                    }
+                }
+            })
+        }
+
+        function deleteBooks(id) {
+            $.ajax({
+                type: "POST",
+                url: '/api/book/delete',
+                data: { "id": id },
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        alert("삭제되었습니다");
+                        showBooks();
+                    }
+                }
+            })
+        }
+    </script>
+</head>
+
+<body>
+    <section class="hero is-warning">
+        <div class="hero-body">
+            <div class="container center">
+                <h1 class="title">
+                    마이 페이보릿 북😆
+                </h1>
+                <h2 class="subtitle">
+                    순위를 매겨봅시다
+                </h2>
+            </div>
+        </div>
+    </section>
+    <div class="book-list" id="book-box">
+        <div id="book-${id}" class="card">
+            <div class="card-content">
+                <div class="media">
+                    <div class="media-left">
+                        <figure class="image is-48x48">
+                            <img src="https://image.yes24.com/goods/122120495/L" alt="Placeholder image" />
+                        </figure>
+                    </div>
+                    <div class="media-content">
+                        <a href="#" target="_blank" id="text-auth" class="star-name title is-4">강용수 (좋아요: 3)</a>
+                        <input type="text" id="input-auth" class="star-name title is-4" value="강용수">
+                        <p id="text-title" class="subtitle is-6">마흔에 읽는 쇼펜하우어</p>
+                        <input type="text" id="input-title" class="subtitle is-6" value="마흔에 읽는 쇼펜하우어">
+                    </div>
+                </div>
+            </div>
+            <footer class="card-footer">
+                <a href="#none" onclick="likeBooks('강용수')" class="card-footer-item has-text-info">위로!
+                    <span class="icon">
+                        <i class="fas fa-thumbs-up"></i>
+                    </span>
+                </a>
+                <a href="#none" onclick="showInputs('강용수')" id="btn-mod" class="card-footer-item has-text-info">수정
+                    <span class="icon">
+                        <i class="fas fa-pen"></i>
+                    </span>
+                </a>
+                <button type="submit" onclick="saveBooks('강용수')" id="btn-save" class="card-footer-item has-text-info">저장
+                    <span class="icon">
+                        <i class="fas fa-pen"></i>
+                    </span>
+                </button>
+                <a href="#" onclick="deleteBooks('강용수')" class="card-footer-item has-text-danger">삭제
+                    <span class="icon">
+                        <i class="fas fa-ban"></i>
+                    </span>
+                </a>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>
