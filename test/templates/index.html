@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>간단한 할 일 목록</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"
+        integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <style type="text/css">
+        .btn-warning {
+            color: white;
+        }
+
+        [id ^='update-list'] {
+            display: none;
+        }
+    </style>
+    <script>
+        $(document).ready(function () {
+            showTodoList();
+        });
+
+        function showTodoList() {
+            $("#todo-list").html("");
+            $.ajax({
+                type: "GET",
+                url: "/todo/list",
+                data: {},
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        let todos = response["todos"];
+                        for (let i = 0; i < todos.length; i++) {
+                            makeTodoLi(todos[i]["seq"], todos[i]["todo"], todos[i]["completeYn"]);
+                        }
+                    }
+                }
+            })
+        }
+
+        function makeTodoLi(seq, todo, completeYn) {
+            let template;
+            if (completeYn == "Y") {
+                template = `<div>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <del>${todo}</del>
+                                    <span>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteTodo('${seq}')">삭제</button>
+                                    </span>
+                                </li>
+                            </div>`;
+            }
+            else {
+                template = `<div id="todo-list-${seq}">
+                                <li class="list-group-item d-flex justify-content-between align-items-center" value="${todo}">
+                                    ${todo}
+                                    <span>
+                                        <button class="btn btn-success btn-sm mr-1" onclick="completeTodo('${seq}')">완료</button>
+                                        <button class="btn btn-secondary btn-sm mr-1" onclick="editTodo('${seq}')">수정</button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteTodo('${seq}')">삭제</button>
+                                    </span>
+                                </li>
+                            </div>
+                            <div id="update-list-${seq}">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="form-inline w-75">
+                                        <input type="text" class="form-control mr-2 w-75" value="${todo}">
+                                        <button type="submit" class="btn btn-secondary btn-sm mr-1" onclick="updateTodo('${seq}')">업데이트</button>
+                                        <button class="btn btn-warning btn-sm" onclick="backTodo('${seq}')">취소</button>
+                                    </div>
+                                </li>
+                            </div>`;
+            }
+            $("#todo-list").append(template);
+        }
+
+        function makeTodo() {
+            let todo_value = $("#todo-val").val();
+            if (todo_value == "") {
+                alert("할 일을 입력해 주세요!");
+                return;
+            }
+            $.ajax({
+                type: "POST",
+                url: "/todo/insert",
+                data: { todo_value: todo_value },
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        alert("등록 완료!");
+                        $("#todo-val").val("");
+                        showTodoList();
+                    }
+                }
+            })
+        }
+
+        function completeTodo(seq) {
+            $.ajax({
+                type: "POST",
+                url: "/todo/complete",
+                data: { "seq": seq },
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        alert("할 일 체크 완료!");
+                        showTodoList();
+                    }
+                }
+            })
+        }
+
+        function editTodo(seq) {
+            $("#todo-list-" + seq).hide();
+            $("#update-list-" + seq).show();
+        }
+
+        function updateTodo(seq) {
+            let todo = $("#update-list-" + seq + " input").val();
+            if (todo == "") {
+                alert("할 일을 입력해 주세요!");
+                return;
+            }
+            $.ajax({
+                type: "POST",
+                url: "/todo/update",
+                data: { "seq": seq, "todo": todo },
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        alert("할 일 업데이트 완료!");
+                        showTodoList();
+                    }
+                }
+            })
+        }
+
+        function deleteTodo(seq) {
+            $.ajax({
+                type: "POST",
+                url: "/todo/delete",
+                data: { "seq": seq },
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        alert("할 일 삭제 완료!");
+                        showTodoList();
+                    }
+                }
+            })
+        }
+
+        function backTodo(seq) {
+            $("#todo-list-" + seq).show();
+            $("#update-list-" + seq).hide();
+            $("#update-list-" + seq + " input").val($("#todo-list-" + seq + " li").attr('value'));
+        }
+
+    </script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">할 일 목록</h2>
+        <!-- 할 일 추가 폼 -->
+        <form class="form-inline mb-4">
+            <input id="todo-val" type="text" class="form-control mr-2 w-50" placeholder="새 할 일">
+            <button type="button" class="btn btn-primary" onclick="makeTodo()">할 일 추가</button>
+        </form>
+
+        <!-- 할 일 목록 -->
+        <ul id="todo-list" class="list-group">
+            <!-- 예시 할 일 (기본 상태) -->
+            <li id="todo-list-seq" class="list-group-item d-flex justify-content-between align-items-center">
+                할 일 1
+                <span>
+                    <button class="btn btn-success btn-sm mr-1" onclick="completeTodo()">완료</button>
+                    <button class="btn btn-secondary btn-sm mr-1" onclick="editTodo()">수정</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTodo()">삭제</button>
+                </span>
+            </li>
+
+            <!-- 예시 할 일 (완료 상태) -->
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <del>할 일 2 (완료)</del>
+                <span>
+                    <button class="btn btn-secondary btn-sm mr-1">수정</button>
+                    <button class="btn btn-danger btn-sm">삭제</button>
+                </span>
+            </li>
+
+            <!-- 예시 할 일 (수정 상태) -->
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <form class="form-inline w-75">
+                    <input type="text" class="form-control mr-2 w-75" value="할 일 3 (수정)">
+                    <button type="submit" class="btn btn-secondary btn-sm mr-1">업데이트</button>
+                    <button class="btn btn-warning btn-sm">취소</button>
+                </form>
+            </li>
+            <!-- 추가 할 일이 여기에 추가됩니다 -->
+        </ul>
+    </div>
+
+</body>
+
+</html>
